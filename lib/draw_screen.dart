@@ -72,6 +72,14 @@ class _DrawState extends State<Draw> {
                             });
                           }),
                       IconButton(
+                          icon: Icon(Icons.delete_sweep),
+                          onPressed: () {
+                            setState(() {
+                              showBottomList = false;
+                              selectedMode = SelectedMode.Eraser;
+                            });
+                          }),
+                      IconButton(
                           icon: Icon(Icons.clear),
                           onPressed: () {
                             setState(() {
@@ -125,14 +133,20 @@ class _DrawState extends State<Draw> {
             return null;
           }
           setState(() {
+            bool _isEraser = this.selectedMode == SelectedMode.Eraser;
+            print(this.selectedColor);
             RenderBox renderBox = context.findRenderObject();
             points.add(DrawingPoints(
                 points: renderBox.globalToLocal(details.localPosition),
                 paint: Paint()
                   ..strokeCap = strokeCap
                   ..isAntiAlias = true
-                  ..color = selectedColor.withOpacity(opacity)
-                  ..strokeWidth = strokeWidth));
+                  ..color = _isEraser
+                      ? Colors.transparent
+                      : selectedColor.withOpacity(opacity)
+                  ..strokeWidth = _isEraser ? strokeWidth + 20 : strokeWidth
+                  ..blendMode = _isEraser ? BlendMode.clear : BlendMode.src));
+            print(points.last.paint);
           });
         },
         onPointerUp: (PointerEvent details) {
@@ -247,6 +261,8 @@ class DrawingPainter extends CustomPainter {
   List<Offset> offsetPoints = List();
   @override
   void paint(Canvas canvas, Size size) {
+    Rect rect = Offset.zero & size;
+    canvas.saveLayer(rect, Paint());
     for (int i = 0; i < pointsList.length - 1; i++) {
       if (pointsList[i] != null && pointsList[i + 1] != null) {
         canvas.drawLine(pointsList[i].points, pointsList[i + 1].points,
@@ -259,6 +275,7 @@ class DrawingPainter extends CustomPainter {
         canvas.drawPoints(PointMode.points, offsetPoints, pointsList[i].paint);
       }
     }
+    canvas.restore();
   }
 
   @override
@@ -271,4 +288,4 @@ class DrawingPoints {
   DrawingPoints({this.points, this.paint});
 }
 
-enum SelectedMode { StrokeWidth, Opacity, Color }
+enum SelectedMode { StrokeWidth, Opacity, Color, Eraser }
