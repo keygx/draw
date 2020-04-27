@@ -27,6 +27,7 @@ class _DrawState extends State<Draw> {
   ];
   @override
   Widget build(BuildContext context) {
+    int _deviceId = -1;
     return Scaffold(
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -108,12 +109,25 @@ class _DrawState extends State<Draw> {
               ),
             )),
       ),
-      body: GestureDetector(
-        onPanUpdate: (details) {
+      body: Listener(
+        onPointerSignal: (PointerEvent details) {
+          print("onPointerSignal");
+          print(details);
+        },
+        onPointerMove: (PointerEvent details) {
+          print("onPointerMove");
+          print(details.device);
+          print(details.localPosition);
+          if (_deviceId == -1) {
+            _deviceId = details.device;
+          }
+          if (_deviceId != details.device) {
+            return null;
+          }
           setState(() {
             RenderBox renderBox = context.findRenderObject();
             points.add(DrawingPoints(
-                points: renderBox.globalToLocal(details.globalPosition),
+                points: renderBox.globalToLocal(details.localPosition),
                 paint: Paint()
                   ..strokeCap = strokeCap
                   ..isAntiAlias = true
@@ -121,20 +135,19 @@ class _DrawState extends State<Draw> {
                   ..strokeWidth = strokeWidth));
           });
         },
-        onPanStart: (details) {
+        onPointerUp: (PointerEvent details) {
+          print("onPointerUp");
+          print(details);
           setState(() {
-            RenderBox renderBox = context.findRenderObject();
-            points.add(DrawingPoints(
-                points: renderBox.globalToLocal(details.globalPosition),
-                paint: Paint()
-                  ..strokeCap = strokeCap
-                  ..isAntiAlias = true
-                  ..color = selectedColor.withOpacity(opacity)
-                  ..strokeWidth = strokeWidth));
+            _deviceId = -1;
+            points.add(null);
           });
         },
-        onPanEnd: (details) {
+        onPointerCancel: (PointerEvent details) {
+          print("onPointerCancel");
+          print(details);
           setState(() {
+            _deviceId = -1;
             points.add(null);
           });
         },
