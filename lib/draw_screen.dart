@@ -151,11 +151,21 @@ class _DrawState extends State<Draw> {
             points.add(null);
           });
         },
-        child: CustomPaint(
-          size: Size.infinite,
-          painter: DrawingPainter(
-            pointsList: points,
-          ),
+        child: Stack(
+          children: <Widget>[
+            Positioned.fill(
+              child: Image.asset(
+                "assets/bg.jpg",
+                repeat: ImageRepeat.repeat,
+              ),
+            ),
+            CustomPaint(
+              size: Size.infinite,
+              painter: DrawingPainter(
+                pointsList: points,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -178,7 +188,7 @@ class _DrawState extends State<Draw> {
                 onColorChanged: (color) {
                   pickerColor = color;
                 },
-                enableLabel: true,
+                showLabel: true,
                 pickerAreaHeightPercent: 0.8,
               ),
             ),
