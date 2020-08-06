@@ -18,6 +18,8 @@
 # Visual Studio Code related
 .vscode/
 
+local.properties
+
 # Flutter/Dart/Pub related
 **/doc/api/
 .dart_tool/
