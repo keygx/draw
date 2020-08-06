@@ -1,5 +1,6 @@
 import 'dart:io';
-import 'dart:ui';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
@@ -10,6 +11,8 @@ class Draw extends StatefulWidget {
 }
 
 class _DrawState extends State<Draw> {
+  GlobalKey _globalKey = GlobalKey();
+  var _image;
   Color selectedColor = Colors.black;
   Color pickerColor = Colors.black;
   double strokeWidth = 3.0;
@@ -155,6 +158,7 @@ class _DrawState extends State<Draw> {
           setState(() {
             _deviceId = -1;
             points.add(null);
+            setImage();
           });
         },
         onPointerCancel: (PointerEvent details) {
@@ -163,6 +167,7 @@ class _DrawState extends State<Draw> {
           setState(() {
             _deviceId = -1;
             points.add(null);
+            setImage();
           });
         },
         child: Stack(
@@ -173,7 +178,14 @@ class _DrawState extends State<Draw> {
                 repeat: ImageRepeat.repeat,
               ),
             ),
+            _image != null
+                ? Image.memory(
+                    Uint8List.view(_image.buffer),
+                    color: Colors.red,
+                  )
+                : Container(),
             CustomPaint(
+              key: _globalKey,
               size: Size.infinite,
               painter: DrawingPainter(
                 pointsList: points,
@@ -183,6 +195,29 @@ class _DrawState extends State<Draw> {
         ),
       ),
     );
+  }
+
+  void setImage() async {
+    ui.Image renderedImage = await this.rendered;
+    var pngData =
+        await renderedImage.toByteData(format: ui.ImageByteFormat.png);
+    setState(() {
+      _image = pngData;
+      // points.clear();
+    });
+  }
+
+  Future<ui.Image> get rendered {
+    ui.PictureRecorder recorder = ui.PictureRecorder();
+    Canvas canvas = Canvas(recorder);
+    DrawingPainter painter = DrawingPainter(pointsList: points);
+    // var size = context.size;
+    RenderBox box = _globalKey.currentContext.findRenderObject();
+    print(box.size);
+    painter.paint(canvas, box.size);
+    return recorder
+        .endRecording()
+        .toImage(box.size.width.toInt(), box.size.height.toInt());
   }
 
   getColorList() {
@@ -262,6 +297,7 @@ class DrawingPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     Rect rect = Offset.zero & size;
+    print(rect);
     canvas.saveLayer(rect, Paint());
     for (int i = 0; i < pointsList.length - 1; i++) {
       if (pointsList[i] != null && pointsList[i + 1] != null) {
@@ -272,7 +308,8 @@ class DrawingPainter extends CustomPainter {
         offsetPoints.add(pointsList[i].points);
         offsetPoints.add(Offset(
             pointsList[i].points.dx + 0.1, pointsList[i].points.dy + 0.1));
-        canvas.drawPoints(PointMode.points, offsetPoints, pointsList[i].paint);
+        canvas.drawPoints(
+            ui.PointMode.points, offsetPoints, pointsList[i].paint);
       }
     }
     canvas.restore();
