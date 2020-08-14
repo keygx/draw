@@ -3,7 +3,9 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:image/image.dart' as imglib;
 
 class Draw extends StatefulWidget {
   @override
@@ -12,7 +14,8 @@ class Draw extends StatefulWidget {
 
 class _DrawState extends State<Draw> {
   GlobalKey _globalKey = GlobalKey();
-  var _image;
+  ByteData _image;
+  Size _canvasSize;
   Color selectedColor = Colors.black;
   Color pickerColor = Colors.black;
   double strokeWidth = 3.0;
@@ -88,6 +91,7 @@ class _DrawState extends State<Draw> {
                             setState(() {
                               showBottomList = false;
                               points.clear();
+                              _image = null;
                             });
                           }),
                     ],
@@ -157,7 +161,7 @@ class _DrawState extends State<Draw> {
           print(details);
           setState(() {
             _deviceId = -1;
-            points.add(null);
+            // points.add(null);
             setImage();
           });
         },
@@ -166,7 +170,7 @@ class _DrawState extends State<Draw> {
           print(details);
           setState(() {
             _deviceId = -1;
-            points.add(null);
+            // points.add(null);
             setImage();
           });
         },
@@ -180,8 +184,7 @@ class _DrawState extends State<Draw> {
             ),
             _image != null
                 ? Image.memory(
-                    Uint8List.view(_image.buffer),
-                    color: Colors.red,
+                    _image.buffer.asUint8List(),
                   )
                 : Container(),
             CustomPaint(
@@ -199,11 +202,14 @@ class _DrawState extends State<Draw> {
 
   void setImage() async {
     ui.Image renderedImage = await this.rendered;
-    var pngData =
+    ByteData newImage =
         await renderedImage.toByteData(format: ui.ImageByteFormat.png);
+    ByteData composedImage =
+        await compositeImage(_image, newImage, _canvasSize);
+
     setState(() {
-      _image = pngData;
-      // points.clear();
+      _image = composedImage;
+      points.clear();
     });
   }
 
@@ -211,13 +217,34 @@ class _DrawState extends State<Draw> {
     ui.PictureRecorder recorder = ui.PictureRecorder();
     Canvas canvas = Canvas(recorder);
     DrawingPainter painter = DrawingPainter(pointsList: points);
-    // var size = context.size;
+
     RenderBox box = _globalKey.currentContext.findRenderObject();
-    print(box.size);
-    painter.paint(canvas, box.size);
+    _canvasSize = box.size;
+    painter.paint(canvas, _canvasSize);
     return recorder
         .endRecording()
-        .toImage(box.size.width.toInt(), box.size.height.toInt());
+        .toImage(_canvasSize.width.toInt(), _canvasSize.height.toInt());
+  }
+
+  Future<ByteData> compositeImage(
+      ByteData currentImage, ByteData newImage, Size size) async {
+    imglib.Image srcImg = imglib.Image.fromBytes(
+        size.width.toInt(), size.height.toInt(), newImage.buffer.asUint8List());
+
+    if (currentImage == null) {
+      return ByteData.view(srcImg.data.buffer);
+    }
+
+    imglib.Image dstImg = imglib.Image.fromBytes(size.width.toInt(),
+        size.height.toInt(), currentImage.buffer.asUint8List());
+
+    imglib.Image compImg = imglib.drawImage(
+        imglib.decodePng(dstImg.data.buffer.asUint8List()),
+        imglib.decodePng(srcImg.data.buffer.asUint8List()));
+
+    Uint8List resultImg = imglib.encodePng(compImg) as Uint8List;
+
+    return ByteData.sublistView(resultImg.buffer.asUint8List());
   }
 
   getColorList() {

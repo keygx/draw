@@ -11,17 +11,15 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^0.1.2
+  image:
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_colorpicker: any
 
-
-
 flutter:
   assets:
     - assets/
 
   uses-material-design: true
-
